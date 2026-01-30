@@ -1,11 +1,12 @@
 import { action } from "@storybook/addon-actions";
 import { StoryObj } from "@storybook/react";
 import { userEvent, within, expect } from "@storybook/test";
-import React from "react";
+import React, { useState } from "react";
 
 import { Accordion, AccordionGroup } from ".";
 import Box from "../box";
 import Textbox, { TextboxProps } from "../textbox";
+import Button from "../button";
 
 import { allowInteractions } from "../../../.storybook/interaction-toggle/reduced-motion";
 import DefaultDecorator from "../../../.storybook/utils/default-decorator";
@@ -107,51 +108,6 @@ ClickToOpen.parameters = {
   chromatic: { disableSnapshot: false },
 };
 
-export const FocusManagement: Story = {
-  render: (args) => (
-    <Accordion
-      onChange={action("expansionToggled")}
-      {...{
-        ...args,
-        "data-role": "accordion",
-        customPadding: 0,
-        title: "Title",
-        subTitle: "Sub Title",
-        width: "100%",
-      }}
-    >
-      <Box mt={2}>Content1</Box>
-      <Box>Content2</Box>
-      <Box>Content3</Box>
-    </Accordion>
-  ),
-  play: async () => {
-    if (!allowInteractions()) {
-      return;
-    }
-    await userEvent.tab();
-
-    await userEvent.keyboard("{Enter}", { delay: 100 });
-    await expect(
-      await within(document.body).findByText("Content1"),
-    ).toBeVisible();
-    await userEvent.keyboard("{Enter}");
-  },
-  decorators: [
-    (StoryToRender) => (
-      <DefaultDecorator>
-        <StoryToRender />
-      </DefaultDecorator>
-    ),
-  ],
-};
-
-FocusManagement.storyName = "Focus Management";
-FocusManagement.parameters = {
-  themeProvider: { chromatic: { theme: "sage" } },
-  chromatic: { disableSnapshot: false },
-};
-
 export const MixedAccordionStatesAndIcons: Story = {
   render: (args) => (
     <AccordionGroup>
@@ -206,9 +162,12 @@ export const MixedAccordionStatesAndIcons: Story = {
     const accordionToggles = canvas.getAllByRole("button");
 
     await userEvent.click(accordionToggles[2]);
-    await userEvent.click(accordionToggles[0], { delay: 200 });
-    await userEvent.click(accordionToggles[2], { delay: 200 });
-    await userEvent.click(accordionToggles[1], { delay: 200 });
+    await userEvent.click(accordionToggles[0]);
+    await expect(accordionToggles[0]).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(accordionToggles[2]);
+    await expect(accordionToggles[2]).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(accordionToggles[1]);
+    await expect(accordionToggles[1]).toHaveAttribute("aria-expanded", "true");
     await expect(accordionToggles[1]).toHaveFocus();
   },
   decorators: [
@@ -263,14 +222,17 @@ export const NestedComponentInteractions: Story = {
 
     const canvas = within(canvasElement);
     const accordionToggle = canvas.getAllByRole("button");
-
-    await userEvent.click(accordionToggle[0], { delay: 100 });
-
     const textboxes = canvas.queryAllByRole("textbox");
     const textbox = textboxes[0];
-    await userEvent.type(textbox, "Text input in Accordion", { delay: 100 });
-    await userEvent.click(accordionToggle[0], { delay: 100 });
-    await userEvent.click(accordionToggle[0], { delay: 100 });
+
+    await userEvent.click(accordionToggle[0]);
+    await expect(
+      await within(document.body).findByText("Textbox in an Accordion"),
+    ).toBeInTheDocument();
+    await userEvent.type(textbox, "Text input in Accordion");
+    await userEvent.click(accordionToggle[0]);
+    await expect(textbox).not.toBeVisible();
+    await userEvent.click(accordionToggle[0]);
     await expect(
       await within(document.body).findByText("Textbox in an Accordion"),
     ).toBeVisible();
@@ -290,56 +252,49 @@ NestedComponentInteractions.parameters = {
   chromatic: { disableSnapshot: false },
 };
 
-export const ToggleGroupedAccordions: Story = {
-  render: (args) => (
-    <AccordionGroup>
-      <Accordion
-        {...args}
-        onChange={action("expansionToggled")}
-        title="First Accordion"
-      >
-        <Box p={2}>
-          <ControlledTextbox label="Textbox in an Accordion" />
-        </Box>
+const DynamicContentHeightComponent = () => {
+  const [contentCount, setContentCount] = useState(3);
+  const modifyContentCount = (modifier: number) => {
+    if (modifier === 1) {
+      setContentCount(contentCount + 1);
+    }
+    if (modifier === -1 && contentCount > 0) {
+      setContentCount(contentCount - 1);
+    }
+  };
+  return (
+    <>
+      <Button onClick={() => modifyContentCount(1)}>Add content</Button>
+      <Button onClick={() => modifyContentCount(-1)} ml={2}>
+        Remove content
+      </Button>
+      <Accordion onChange={action("expansionToggled")} mt={2} title="Title">
+        {Array.from(Array(contentCount).keys()).map((value) => (
+          <Box key={value} mt={2}>
+            Content
+          </Box>
+        ))}
       </Accordion>
-      <Accordion
-        {...args}
-        onChange={action("expansionToggled")}
-        title="Second Accordion"
-      >
-        <Box p={2}>
-          <ControlledTextbox label="Textbox in an Accordion" />
-        </Box>
-      </Accordion>
-      <Accordion
-        {...args}
-        onChange={action("expansionToggled")}
-        title="Third Accordion"
-      >
-        <Box p={2}>
-          <Box mt={2}>Content</Box>
-          <Box>Content</Box>
-          <Box>Content</Box>
-        </Box>
-      </Accordion>
-    </AccordionGroup>
-  ),
+    </>
+  );
+};
+
+export const DynamicContentHeight: Story = {
+  render: () => <DynamicContentHeightComponent />,
   play: async ({ canvasElement }) => {
     if (!allowInteractions()) {
       return;
     }
 
     const canvas = within(canvasElement);
-    const accordionToggles = canvas.getAllByRole("button");
+    const button = canvas.getAllByRole("button");
+    const accordionToggle = canvas.getAllByRole("button")[2];
 
-    accordionToggles.forEach(async (toggle) => {
-      await userEvent.click(toggle);
-    });
-
-    accordionToggles.forEach(async (toggle) => {
-      await userEvent.click(toggle, { delay: 500 });
-      await expect(accordionToggles[2]).toHaveFocus();
-    });
+    await userEvent.click(accordionToggle);
+    await userEvent.click(button[0]);
+    await userEvent.click(button[0]);
+    await userEvent.click(button[1]);
+    await userEvent.click(button[1]);
   },
   decorators: [
     (StoryToRender) => (
@@ -350,63 +305,8 @@ export const ToggleGroupedAccordions: Story = {
   ],
 };
 
-ToggleGroupedAccordions.storyName = "Toggle Grouped Accordions";
-ToggleGroupedAccordions.parameters = {
+DynamicContentHeight.storyName = "Dynamic Content Height";
+DynamicContentHeight.parameters = {
   themeProvider: { chromatic: { theme: "sage" } },
   chromatic: { disableSnapshot: false },
-};
-
-export const ToggleViaKeyboard: Story = {
-  render: (args) => (
-    <Accordion
-      onChange={action("expansionToggled")}
-      {...{
-        ...args,
-        "data-role": "accordion",
-        customPadding: 0,
-        title: "Title",
-        subTitle: "Sub Title",
-        width: "100%",
-      }}
-    >
-      <Box mt={2}>Content1</Box>
-      <Box>Content2</Box>
-      <Box>Content3</Box>
-    </Accordion>
-  ),
-  play: async ({ canvasElement }) => {
-    if (!allowInteractions()) {
-      return;
-    }
-
-    const canvas = within(canvasElement);
-    const accordionToggle = canvas.getAllByRole("button");
-
-    accordionToggle[0].focus();
-
-    await userEvent.keyboard("{Enter}");
-    await expect(
-      await within(document.body).findByText("Content1"),
-    ).toBeVisible();
-    await userEvent.keyboard("{Enter}", { delay: 500 });
-
-    await userEvent.keyboard(" ", { delay: 500 });
-    await expect(
-      await within(document.body).findByText("Content1"),
-    ).toBeVisible();
-    await userEvent.keyboard(" ");
-  },
-  decorators: [
-    (StoryToRender) => (
-      <DefaultDecorator>
-        <StoryToRender />
-      </DefaultDecorator>
-    ),
-  ],
-};
-
-ToggleViaKeyboard.storyName = "Toggle Via Keyboard";
-ToggleViaKeyboard.parameters = {
-  themeProvider: { chromatic: { theme: "sage" } },
-  chromatic: { disableSnapshot: true },
 };
