@@ -255,12 +255,11 @@ NestedComponentInteractions.parameters = {
 const DynamicContentHeightComponent = () => {
   const [contentCount, setContentCount] = useState(3);
   const modifyContentCount = (modifier: number) => {
-    if (modifier === 1) {
-      setContentCount(contentCount + 1);
+    if (!contentCount && modifier === -1) {
+      return;
     }
-    if (modifier === -1 && contentCount > 0) {
-      setContentCount(contentCount - 1);
-    }
+
+    setContentCount(contentCount + modifier);
   };
   return (
     <>
@@ -289,12 +288,15 @@ export const DynamicContentHeight: Story = {
     const canvas = within(canvasElement);
     const button = canvas.getAllByRole("button");
     const accordionToggle = canvas.getAllByRole("button")[2];
+    const contentElements = within(document.body).getAllByText("Content");
 
     await userEvent.click(accordionToggle);
     await userEvent.click(button[0]);
     await userEvent.click(button[0]);
     await userEvent.click(button[1]);
     await userEvent.click(button[1]);
+
+    expect(contentElements).toHaveLength(3);
   },
   decorators: [
     (StoryToRender) => (

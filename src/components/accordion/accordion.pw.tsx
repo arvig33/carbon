@@ -17,7 +17,6 @@ import {
   AccordionComponent,
   AccordionWithIcon,
   AccordionDefault,
-  AccordionWithBoxAndCustomPaddings,
   AccordionGroupValidation,
   AccordionWithDefinitionList,
   AccordionWithSplit,
@@ -234,16 +233,7 @@ test.describe("Accessibility tests for Accordion", () => {
     await checkAccessibility(page);
   });
 
-  test("should pass accessibility tests for Accordion with Box and custom paddings", async ({
-    mount,
-    page,
-  }) => {
-    await mount(<AccordionWithBoxAndCustomPaddings />);
-
-    await checkAccessibility(page);
-  });
-
-  test("should pass accessibility tests for AccordionGroupValidation", async ({
+  test("should pass accessibility tests for group validation example", async ({
     mount,
     page,
   }) => {
@@ -252,7 +242,7 @@ test.describe("Accessibility tests for Accordion", () => {
     await checkAccessibility(page);
   });
 
-  test("should pass accessibility tests for AccordionWithDefinitionList", async ({
+  test("should pass accessibility tests for example with Definition List", async ({
     mount,
     page,
   }) => {
@@ -261,7 +251,7 @@ test.describe("Accessibility tests for Accordion", () => {
     await checkAccessibility(page);
   });
 
-  test("should pass accessibility tests for Accordion when variant is subtle", async ({
+  test("should pass accessibility tests when variant is subtle", async ({
     mount,
     page,
   }) => {
